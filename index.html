@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1B1C21">
+<title>WahouWah</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+
+  <!-- Discover / connect -->
+  <section id="p-discover" class="page">
+    <div class="disc">
+      <img class="logo" src="assets/Logo_Head.png" alt="Keyztone">
+      <img class="bt" src="assets/logo-bt.svg" alt="">
+      <p id="disc-msg" class="msg"></p>
+      <button id="btn-connect" class="btn big">CONNECT TO WAHOUWAH</button>
+      <button id="btn-reconnect" class="btn" hidden>RECONNECT</button>
+      <details class="help">
+        <summary>Pairing help</summary>
+        <p>The pedal only accepts the phone it is bonded with. If the connection fails:</p>
+        <ol>
+          <li>In Android Bluetooth settings, forget "WahouWah".</li>
+          <li>Clear the bond on the pedal (same procedure as with the native app).</li>
+          <li>Come back here, press CONNECT and accept the pairing request.</li>
+        </ol>
+      </details>
+      <button id="btn-demo" class="link">Demo mode (no pedal)</button>
+      <p id="disc-ver" class="ver"></p>
+    </div>
+  </section>
+
+  <!-- Home -->
+  <section id="p-home" class="page" hidden>
+    <p class="hint">Click on a slot to assign a preset</p>
+    <div id="slots" class="slots"></div>
+  </section>
+
+  <!-- Live edit -->
+  <section id="p-edit" class="page" hidden>
+    <div class="edit-top">
+      <button id="e-back" class="icon"><img src="assets/shape-arrow-back.svg" alt="Back"></button>
+      <input id="e-name" maxlength="20" autocomplete="off" spellcheck="false">
+      <button id="e-save" class="icon"><img src="assets/save.svg" alt="Save"></button>
+    </div>
+    <button id="e-mode" class="drop wide"><span></span><img src="assets/shape-arrow-dropbox.svg" alt=""></button>
+    <div class="carousel">
+      <button id="e-prev" class="arrow"><img src="assets/arrow_left_grey.png" alt="Previous"></button>
+      <div id="e-view" class="cview"></div>
+      <button id="e-next" class="arrow"><img src="assets/arrow_right_grey.png" alt="Next"></button>
+    </div>
+    <div id="e-dots" class="dots"></div>
+  </section>
+
+  <!-- Presets library -->
+  <section id="p-lib" class="page" hidden>
+    <button id="l-filter" class="drop wide"><span></span><img src="assets/shape-arrow-dropbox.svg" alt=""></button>
+    <div id="l-list" class="list"></div>
+  </section>
+
+  <!-- Calibration -->
+  <section id="p-calib" class="page" hidden>
+    <h1>Calibration</h1>
+    <div class="cal-cols">
+      <div><p class="up">Expression Pedal</p><button id="c-exp" class="btn shadow">CALIBRATION</button></div>
+      <div><p class="up">Real Wah Pedal</p><button id="c-wah" class="btn shadow">CALIBRATION</button></div>
+    </div>
+    <div class="band">
+      <p>Select The Pedal You Mainly Use</p>
+      <div id="c-seg" class="seg"><button data-v="1">WAH</button><button data-v="0">EXPRESSION</button></div>
+      <p class="cap">All factory presets will be reassigned to the controller of your choice. You can also assign either Expression or Wah pedal in the live edit page and save the preset as a user preset.</p>
+    </div>
+  </section>
+
+  <!-- Calibration wizard -->
+  <section id="p-wiz" class="page" hidden>
+    <h1 id="w-title" class="center white"></h1>
+    <div id="w-dots" class="dots top"></div>
+    <div id="w-view" class="wview"></div>
+    <div class="wbtns"><button id="w-cancel" class="link">Cancel</button><button id="w-next" class="btn shadow dark">NEXT</button></div>
+  </section>
+</main>
+
+<nav id="tabs" hidden>
+  <button data-tab="home"><i style="--i:url(assets/Home.png)"></i>Home</button>
+  <button data-tab="edit"><i style="--i:url(assets/LiveEdit.png)"></i>Live Edit</button>
+  <button data-tab="lib"><i style="--i:url(assets/Presets.png)"></i>Presets</button>
+  <button data-tab="calib"><i style="--i:url(assets/Configuration.png)"></i>Calibration</button>
+</nav>
+
+<div id="modal" class="modal" hidden><div class="frame"></div></div>
+<div id="loader" class="loader" hidden><div class="spin"></div><p></p></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
