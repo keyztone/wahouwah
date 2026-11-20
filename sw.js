@@ -1,5 +1,5 @@
 // Offline cache: network first, falling back to the cached copy.
-const CACHE = 'wahouwah-v1';
+const CACHE = 'wahouwah-v2';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {

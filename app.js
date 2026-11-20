@@ -2,7 +2,7 @@
 /* WahouWah web controller — Web Bluetooth port of the Keyztone Xamarin app.
    Protocol taken from Firmware/ble_wah.h and Keyztone.MyWahFactory (WahPedalCommunicationService, *DataHandshake). */
 
-const APP_VERSION = 'web 1.0.0';
+const APP_VERSION = 'web 1.1.0';
 const MIN_FW = '1.1.1';
 
 // ───────────────────────── Protocol ─────────────────────────
@@ -243,12 +243,13 @@ function sendCalib(source, status, gain) {
   S.calib.EXP_STATUS = c.EXP_STATUS; S.calib.WAH_STATUS = c.WAH_STATUS; S.calib.WAH_GAIN = c.WAH_GAIN;
   return io.write(CH.calib, calibEncode(c));
 }
-const fwOk = v => {
-  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(v || ''), n = MIN_FW.split('.').map(Number);
+const fwAtLeast = (v, min) => {
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(v || ''), n = min.split('.').map(Number);
   if (!m) return false;
   const c = m.slice(1).map(Number);
   return c[0] > n[0] || (c[0] === n[0] && (c[1] > n[1] || (c[1] === n[1] && c[2] >= n[2])));
 };
+const fwOk = v => fwAtLeast(v, MIN_FW);
 
 // ───────────────────────── Small UI helpers ─────────────────────────
 const $ = s => document.querySelector(s);
@@ -283,6 +284,25 @@ const pick = (title, items) => modal((f, close) => {
 
 // Knob value → displayed text (formulas from KnobControl.xaml.cs)
 const FREQ = [20,40,55,65,75,85,100,110,120,130,140,150,160,170,175,185,195,205,210,220,230,235,245,250,260,265,275,280,290,295,305,310,320,325,330,340,345,350,360,365,370,375,385,390,395,400,405,410,415,425,430,435,440,445,450,455,460,465,470,475,480,485,490,495,500,505,510,515,520,525,530,535,540,545,550,555,560,565,570,575,580,585,590,595,595,600,605,610,615,620,625,630,635,640,645,655,660,665,670,675,680,685,690,695,700,705,710,715,725,730,735,740,745,750,760,765,770,775,780,790,795,800,805,815,820,825,835,840,845,855,860,865,875,880,890,895,905,910,915,925,930,940,945,955,960,970,980,985,995,1000,1010,1020,1025,1035,1045,1050,1060,1070,1075,1085,1095,1105,1115,1120,1130,1140,1150,1160,1170,1180,1190,1200,1210,1220,1230,1240,1250,1260,1270,1285,1295,1305,1315,1330,1340,1350,1365,1375,1390,1400,1415,1430,1440,1455,1470,1485,1500,1515,1530,1545,1560,1575,1590,1610,1625,1640,1660,1675,1695,1715,1735,1755,1775,1795,1815,1835,1860,1880,1905,1930,1950,1975,2000,2030,2055,2085,2110,2140,2170,2200,2230,2265,2295,2330,2365,2400,2435,2475,2510,2550,2590,2630,2675,2720,2765,2810,2855,2905,2955,3005,3060,3115,3170,3225,3285,3345];
+// Auto mode, as computed by timer_start() in the firmware (integer arithmetic as in C):
+// one AD5263 / DS1882 step per timer tick, half-sweep time mapped from TIME_AUTO_* to [0.6 ms x steps, 2000 ms].
+const cdiv = (a, b) => Math.trunc(a / b);
+function autoRate(T, steps) {
+  if (!steps) return null;
+  const minMs = cdiv(steps * 600, 1000);
+  const halfMs = cdiv((T - 0) * (2000 - minMs), 131070) + minMs;
+  const tickUs = cdiv(halfMs * 1000, steps);
+  const periodMs = 2 * steps * tickUs / 1000;
+  return { hz: 1000 / periodMs, periodMs };
+}
+const rateText = r => !r ? 'fixed' : r.hz >= 1 ? `${r.hz.toFixed(1)} Hz` : `${(r.periodMs / 1000).toFixed(1)} s`;
+// AD5263 codes actually reached at the two ends of the auto-wah sweep.
+// Before firmware 1.2.1 the timer value (already in FC1..FC2) was mapped a second time from 0..255 to FC1..FC2.
+function autoSweepCodes(fc1, fc2, fw) {
+  if (fwAtLeast(fw, '1.2.1') || !fw) return [fc1, fc2];
+  const e = x => cdiv(x * (fc2 - fc1), 255) + fc1;
+  return [e(fc1), e(fc2)];
+}
 const levelText = (v, min, max) => v === max ? 'MUTE' : v === min ? 'FULL' : `-${v} dB`;
 const KNOB_TEXT = {
   Frequency: x => `${FREQ[x] ?? 0} Hz`,
@@ -424,7 +444,12 @@ const ui = {
       };
       v.append(auto, el('div', 'fastslow' + (d.AUTO ? '' : ' off'), '<span>FAST</span><span>SLOW</span>'));
       const tk = wahMode ? 'TIME_AUTO_WAH' : 'TIME_AUTO_LEVEL';
-      v.append(slider({ max: 131070, step: 1, ...bind(tk), disabled: !d.AUTO, text: x => String(Math.round(x / 1310.7)) }));
+      const steps = wahMode ? Math.abs(d.FC2_1 - d.FC1_1) : Math.abs(d.LV2_1 - d.LV1_1);
+      v.append(slider({ max: 131070, step: 1, ...bind(tk), disabled: !d.AUTO, text: x => rateText(autoRate(x, steps)) }));
+      if (wahMode && d.AUTO && steps) {
+        const [a, b] = autoSweepCodes(d.FC1_1, d.FC2_1, S.fw);
+        v.append(el('p', 'sweep', `Sweep ${FREQ[a]} Hz ↔ ${FREQ[b]} Hz`));
+      }
     }
   },
   async leaveEdit() {   // called before leaving the edit page; false = stay
