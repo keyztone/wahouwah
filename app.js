@@ -119,7 +119,7 @@ const ble = {
         if (this.closing) throw new Error('Disconnected');
         try {
           if (!this.dev.gatt.connected) await this.open();
-          return await fn();
+          return await Promise.race([fn(), sleep(8000).then(() => { throw new Error('No answer from pedal (timeout)'); })]);
         } catch (e) { err = e; await sleep(i === 0 ? 500 : 1800); }
       }
       throw err;
@@ -603,7 +603,8 @@ async function startSession(transport, device) {
   } catch (e) {
     io.patient = false; loader(false); console.error(e);
     try { io.disconnect(); } catch (x) { /* ignore */ }
-    discMsg(`Can not connect to device.\n${e && e.message ? e.message : e}\n\nIf the pedal was already paired with another phone, or the bond was cleared on only one side, see "Pairing help" below.`, true);
+    const win = /Windows/.test(navigator.userAgent) ? '\n\nOn Windows, pair the pedal first in Settings → Bluetooth & devices → Add device, then connect here.' : '';
+    discMsg(`Can not connect to device.\n${e && e.message ? e.message : e}\n\nIf the pedal was already paired with another phone, or the bond was cleared on only one side, see "Pairing help" below.${win}`, true);
     $('#btn-reconnect').hidden = io !== ble || !ble.dev;
     return;
   }
